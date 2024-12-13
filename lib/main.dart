@@ -1,228 +1,190 @@
 import 'package:flutter/material.dart';
-//import 'dart:math';
+import 'package:cached_network_image/cached_network_image.dart';
 
-void main() => runApp(const MyApp());
+void main() {
+  runApp(MyApp());
+}
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Calculadora',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: const CalculatorPage(),
+      home: MainPage(),
     );
   }
 }
 
-class CalculatorPage extends StatefulWidget {
-  const CalculatorPage({Key? key}) : super(key: key);
-
+class MainPage extends StatefulWidget {
   @override
-  _CalculatorPageState createState() => _CalculatorPageState();
+  _MainPageState createState() => _MainPageState();
 }
 
-class _CalculatorPageState extends State<CalculatorPage> {
-  String _input = '';
-  String _output = '0';
+class _MainPageState extends State<MainPage> {
+  int _selectedIndex = 0;
 
-  void _buttonPressed(String value) {
+  final List<Widget> _pages = [
+    HomePage(),
+    SearchPage(),
+    ProfilePage(),
+  ];
+
+  void _onItemTapped(int index) {
     setState(() {
-      if (value == 'C') {
-        _input = '';
-        _output = '0';
-      } else if (value == '=') {
-        try {
-          _output = _evaluateExpression(_input);
-        } catch (e) {
-          _output = 'Error';
-        }
-      } else {
-        _input += value;
-      }
+      _selectedIndex = index;
     });
-  }
-
-  String _evaluateExpression(String input) {
-    double result = 0.0;
-
-    try {
-      result = _calculate(input);
-      return result.toStringAsFixed(2).replaceAll('.00', '');
-    } catch (e) {
-      return 'Error';
-    }
-  }
-
-  double _calculate(String input) {
-    List<String> tokens = _tokenize(input);
-    List<double> numbers = [];
-    List<String> operators = [];
-
-    for (var token in tokens) {
-      if (_isOperator(token)) {
-        while (operators.isNotEmpty &&
-            _precedence(operators.last) >= _precedence(token)) {
-          _compute(numbers, operators.removeLast());
-        }
-        operators.add(token);
-      } else {
-        numbers.add(double.parse(token));
-      }
-    }
-
-    while (operators.isNotEmpty) {
-      _compute(numbers, operators.removeLast());
-    }
-
-    return numbers.last;
-  }
-
-  List<String> _tokenize(String input) {
-    final regex = RegExp(r'(\d+\.?\d*|\+|\-|\*|\/)');
-    return regex.allMatches(input).map((m) => m.group(0)!).toList();
-  }
-
-  bool _isOperator(String token) => ['+', '-', '*', '/'].contains(token);
-
-  int _precedence(String operator) {
-    if (operator == '+' || operator == '-') return 1;
-    if (operator == '*' || operator == '/') return 2;
-    return 0;
-  }
-
-  void _compute(List<double> numbers, String operator) {
-    final b = numbers.removeLast();
-    final a = numbers.removeLast();
-
-    switch (operator) {
-      case '+':
-        numbers.add(a + b);
-        break;
-      case '-':
-        numbers.add(a - b);
-        break;
-      case '*':
-        numbers.add(a * b);
-        break;
-      case '/':
-        numbers.add(a / b);
-        break;
-    }
-  }
-
-  Widget _buildButton(String value, {Color? color}) {
-    return Expanded(
-      child: ElevatedButton(
-        onPressed: () => _buttonPressed(value),
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.all(20),
-          backgroundColor: color ?? Colors.blue,
-        ),
-        child: Text(
-          value,
-          style: const TextStyle(fontSize: 20, color: Colors.white),
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Container(
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('assets/fondo.jpg'),
-              fit: BoxFit.cover,
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Navegación Flutter'),
+        centerTitle: true,
+      ),
+      drawer: MenuLateral(onSelectPage: (index) {
+        Navigator.of(context).pop();
+        setState(() {
+          _selectedIndex = index;
+        });
+      }),
+      body: _pages[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: 'Buscar',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Perfil',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        onTap: _onItemTapped,
+      ),
+    );
+  }
+}
+
+class MenuLateral extends StatelessWidget {
+  final Function(int) onSelectPage;
+
+  MenuLateral({required this.onSelectPage});
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: <Widget>[
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: Colors.blue,
             ),
-          ),
-        ),
-        Scaffold(
-          backgroundColor: Colors.transparent,
-          appBar: AppBar(
-            title: const Text('Calculadora'),
-          ),
-          body: Column(
-            children: [
-              Center(
-                child: Column(
-                  children: [
-                    SizedBox(
-                      height: 250.0,
-                      width: 400.0,
-                      child: Image.asset('assets/casio.jpg'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Center(
+                  child: Container(
+                    margin: EdgeInsets.only(bottom: 10),
+                    height: 100,
+                    width: 100,
+                    decoration: BoxDecoration(
+                      image: DecorationImage(
+                        fit: BoxFit.cover,
+                        image: AssetImage(
+                            'assets/logo.png'), // Reemplazar con tu imagen
+                      ),
                     ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  alignment: Alignment.bottomRight,
-                  child: Text(
-                    _input,
-                    style: const TextStyle(
-                        fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(20),
-                alignment: Alignment.bottomRight,
-                child: Text(
-                  _output,
-                  style: const TextStyle(
-                      fontSize: 32, fontWeight: FontWeight.bold),
+                Text(
+                  '...::: Menú Lateral :::...',
+                  style: TextStyle(color: Colors.white, fontSize: 16),
                 ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                flex: 2,
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        _buildButton('7'),
-                        _buildButton('8'),
-                        _buildButton('9'),
-                        _buildButton('/', color: Colors.orange),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        _buildButton('4'),
-                        _buildButton('5'),
-                        _buildButton('6'),
-                        _buildButton('*', color: Colors.orange),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        _buildButton('1'),
-                        _buildButton('2'),
-                        _buildButton('3'),
-                        _buildButton('-', color: Colors.orange),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        _buildButton('C', color: Colors.red),
-                        _buildButton('0'),
-                        _buildButton('='),
-                        _buildButton('+', color: Colors.orange),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
+          ListTile(
+            leading: Icon(Icons.home),
+            title: Text('Home'),
+            onTap: () => onSelectPage(0),
+          ),
+          ListTile(
+            leading: Icon(Icons.search),
+            title: Text('Buscar'),
+            onTap: () => onSelectPage(1),
+          ),
+          ListTile(
+            leading: Icon(Icons.person),
+            title: Text('Perfil'),
+            onTap: () => onSelectPage(2),
+          ),
+          ListTile(
+            leading: Icon(Icons.exit_to_app),
+            title: Text('Salir'),
+            onTap: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class HomePage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Home'),
+        centerTitle: true,
+      ),
+      body: Center(
+        child: CachedNetworkImage(
+          imageUrl:
+              'https://s3.voyapon.com/wp-content/uploads/sites/3/2020/03/20034614/aisatsu_sayounara.png',
+          placeholder: (context, url) => CircularProgressIndicator(),
+          errorWidget: (context, url, error) => Icon(Icons.error),
         ),
-      ],
+      ),
+    );
+  }
+}
+
+class SearchPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Buscar'),
+        centerTitle: true,
+      ),
+      body: Center(
+        child: Text('Pantalla de búsqueda'),
+      ),
+    );
+  }
+}
+
+class ProfilePage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Perfil'),
+        centerTitle: true,
+      ),
+      body: Center(
+        child: Text('Pantalla de perfil'),
+      ),
     );
   }
 }
